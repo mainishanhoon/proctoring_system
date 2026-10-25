@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Invigilator Dashboard — Proctoring System</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #0f172a;
+        color: #e2e8f0;
+        min-height: 100vh;
+      }
+
+      /* ── Topbar ── */
+      .topbar {
+        background: #1e293b;
+        padding: 14px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #334155;
+      }
+
+      .topbar h1 {
+        font-size: 16px;
+        font-weight: 600;
+      }
+
+      .topbar-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .live-badge {
+        background: #ef4444;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 20px;
+        letter-spacing: 1px;
+        animation: pulse 2s infinite;
+      }
+
+      .exam-label {
+        font-size: 13px;
+        color: #94a3b8;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      /* ── Layout ── */
+      .dashboard {
+        display: grid;
+        grid-template-columns: 340px 1fr;
+        height: calc(100vh - 53px);
+      }
+
+      /* ── Sidebar ── */
+      .sidebar {
+        background: #1e293b;
+        border-right: 1px solid #334155;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .sidebar-tabs {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        border-bottom: 1px solid #334155;
+      }
+
+      .sidebar-tab {
+        padding: 12px;
+        text-align: center;
+        font-size: 12px;
+        font-weight: 600;
+        color: #64748b;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+        transition: all 0.15s;
+      }
+
+      .sidebar-tab.active {
+        color: #3b82f6;
+        border-bottom-color: #3b82f6;
+        background: rgba(59, 130, 246, 0.05);
+      }
+
+      .tab-panel {
+        display: none;
+        padding: 16px;
+      }
+      .tab-panel.active {
+        display: block;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .input-row input {
+        flex: 1;
+        padding: 8px 12px;
+        background: #0f172a;
+        border: 1px solid #334155;
+        border-radius: 6px;
+        color: #e2e8f0;
+        font-size: 13px;
+      }
+
+      .input-row input:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .action-btn {
+        padding: 8px 14px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+
+      .action-btn:hover {
+        background: #2563eb;
+      }
+
+      .action-btn.refresh {
+        background: #334155;
+        padding: 8px 10px;
+      }
+
+      .action-btn.refresh:hover {
+        background: #475569;
+      }
+
+      /* ── Session list ── */
+      .session-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 8px;
+      }
+
+      .session-card {
+        padding: 14px 16px;
+        border-radius: 8px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        border: 1px solid #334155;
+        transition: all 0.15s;
+        background: #0f172a;
+      }
+
+      .session-card:hover {
+        border-color: #475569;
+      }
+      .session-card.active {
+        border-color: #3b82f6;
+        background: #0f172a;
+      }
+      .session-card.flagged {
+        border-color: #ef4444;
+      }
+
+      .session-card-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 6px;
+      }
+
+      .session-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #e2e8f0;
+      }
+
+      .session-meta {
+        font-size: 11px;
+        color: #64748b;
+        display: flex;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      .violation-pill {
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-weight: 600;
+      }
+
+      .violation-pill.none {
+        background: #14532d;
+        color: #86efac;
+      }
+      .violation-pill.some {
+        background: #78350f;
+        color: #fde68a;
+      }
+      .violation-pill.many {
+        background: #7f1d1d;
+        color: #fca5a5;
+      }
+
+      .student-status {
+        font-size: 10px;
+        padding: 2px 8px;
+        border-radius: 20px;
+      }
+
+      .student-status.active {
+        background: #14532d;
+        color: #86efac;
+      }
+      .student-status.flagged {
+        background: #7f1d1d;
+        color: #fca5a5;
+      }
+      .student-status.completed {
+        background: #1e3a5f;
+        color: #93c5fd;
+      }
+
+      .placeholder-text {
+        padding: 24px 16px;
+        text-align: center;
+        font-size: 13px;
+        color: #475569;
+        line-height: 1.6;
+      }
+
+      /* ── Exam overview strip ── */
+      .exam-strip {
+        padding: 10px 16px;
+        background: #0f172a;
+        border-bottom: 1px solid #334155;
+        display: none;
+      }
+
+      .exam-strip.show {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .exam-strip-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+        flex: 1;
+      }
+
+      .exam-strip-meta {
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      /* ── Main panel ── */
+      .main-panel {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        padding: 14px 24px;
+        border-bottom: 1px solid #1e293b;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #1e293b;
+      }
+
+      .panel-header h2 {
+        font-size: 15px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .panel-header span {
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      /* ── Alert feed ── */
+      .alert-feed {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px 24px;
+      }
+
+      .alert-item {
+        display: flex;
+        gap: 14px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        border-left: 3px solid transparent;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .alert-item.high {
+        background: #1c0a0a;
+        border-left-color: #ef4444;
+      }
+      .alert-item.medium {
+        background: #1c1500;
+        border-left-color: #f59e0b;
+      }
+      .alert-item.low {
+        background: #0a1c0f;
+        border-left-color: #22c55e;
+      }
+
+      .alert-icon {
+        font-size: 20px;
+        flex-shrink: 0;
+      }
+      .alert-content {
+        flex: 1;
+      }
+
+      .alert-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #e2e8f0;
+        margin-bottom: 3px;
+      }
+
+      .alert-desc {
+        font-size: 12px;
+        color: #94a3b8;
+        line-height: 1.4;
+      }
+      .alert-meta {
+        font-size: 11px;
+        color: #475569;
+        margin-top: 4px;
+      }
+
+      .severity-badge {
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        align-self: flex-start;
+        white-space: nowrap;
+      }
+
+      .severity-badge.high {
+        background: #7f1d1d;
+        color: #fca5a5;
+      }
+      .severity-badge.medium {
+        background: #78350f;
+        color: #fde68a;
+      }
+      .severity-badge.low {
+        background: #14532d;
+        color: #86efac;
+      }
+
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #475569;
+      }
+
+      .empty-state .icon {
+        font-size: 40px;
+        margin-bottom: 12px;
+      }
+      .empty-state p {
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      /* ── Stats bar ── */
+      .stats-bar {
+        padding: 12px 24px;
+        background: #1e293b;
+        border-top: 1px solid #334155;
+        display: flex;
+        gap: 24px;
+        align-items: center;
+      }
+
+      .stat {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .stat-value {
+        font-size: 20px;
+        font-weight: 600;
+        color: #e2e8f0;
+      }
+
+      .stat-label {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+      }
+
+      .report-btn {
+        margin-left: auto;
+        padding: 8px 16px;
+        background: #1e40af;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+      }
+
+      .report-btn:hover {
+        background: #1d4ed8;
+      }
+      .report-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      /* ── Modal ── */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .modal-overlay.show {
+        display: flex;
+      }
+
+      .modal {
+        background: #1e293b;
+        border-radius: 14px;
+        padding: 28px;
+        width: 100%;
+        max-width: 560px;
+        max-height: 80vh;
+        overflow-y: auto;
+        border: 1px solid #334155;
+      }
+
+      .modal h3 {
+        font-size: 17px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        color: #e2e8f0;
+      }
+
+      .report-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #334155;
+        font-size: 13px;
+      }
+
+      .report-row .label {
+        color: #64748b;
+      }
+      .report-row .value {
+        color: #e2e8f0;
+        font-weight: 500;
+      }
+
+      .breakdown-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .breakdown-card {
+        background: #0f172a;
+        border-radius: 8px;
+        padding: 12px;
+        text-align: center;
+      }
+
+      .breakdown-card .count {
+        font-size: 22px;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+
+      .breakdown-card .type {
+        font-size: 11px;
+        color: #64748b;
+        margin-top: 4px;
+        text-transform: capitalize;
+      }
+
+      .close-modal {
+        width: 100%;
+        margin-top: 20px;
+        padding: 10px;
+        background: #334155;
+        color: #e2e8f0;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      /* ── Scrollbar ── */
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #334155;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="topbar">
+      <h1>Proctoring Dashboard</h1>
+      <div class="topbar-right">
+        <span class="exam-label" id="examLabel"></span>
+        <span class="live-badge">LIVE</span>
+      </div>
+    </div>
+
+    <div class="dashboard">
+      <!-- ── Sidebar ── -->
+      <div class="sidebar">
+        <div class="sidebar-tabs">
+          <div
+            class="sidebar-tab active"
+            id="tab-exam"
+            onclick="switchTab('exam')"
+          >
+            By Exam
+          </div>
+          <div
+            class="sidebar-tab"
+            id="tab-session"
+            onclick="switchTab('session')"
+          >
+            By Session
+          </div>
+        </div>
+
+        <!-- Exam tab -->
+        <div class="tab-panel active" id="panel-exam">
+          <div class="input-row">
+            <input
+              type="number"
+              id="examIdInput"
+              placeholder="Exam ID"
+              min="1"
+            />
+            <button class="action-btn" onclick="loadExam()">Load</button>
+            <button
+              class="action-btn refresh"
+              onclick="refreshExam()"
+              title="Refresh student list"
+            >
+              ↺
+            </button>
+          </div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.5">
+            Enter an exam ID to automatically load all students taking that
+            exam. Use the refresh button to pick up new students who join.
+          </div>
+        </div>
+
+        <!-- Session tab -->
+        <div class="tab-panel" id="panel-session">
+          <div class="input-row">
+            <input
+              type="number"
+              id="sessionIdInput"
+              placeholder="Session ID"
+              min="1"
+            />
+            <button class="action-btn" onclick="watchSingleSession()">
+              Watch
+            </button>
+          </div>
+          <div style="font-size: 11px; color: #475569; line-height: 1.5">
+            Enter a specific session ID to monitor a single student.
+          </div>
+        </div>
+
+        <!-- Exam info strip -->
+        <div class="exam-strip" id="examStrip">
+          <div>
+            <div class="exam-strip-title" id="examStripTitle"></div>
+            <div class="exam-strip-meta" id="examStripMeta"></div>
+          </div>
+        </div>
+
+        <!-- Session cards list -->
+        <div class="session-list" id="sessionList">
+          <div class="placeholder-text">
+            Load an exam or enter a session ID to begin monitoring.
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Main panel ── -->
+      <div class="main-panel">
+        <div class="panel-header">
+          <h2 id="panelTitle">Select a session to monitor</h2>
+          <span id="panelMeta"></span>
+        </div>
+
+        <div class="alert-feed" id="alertFeed">
+          <div class="empty-state">
+            <div class="icon">🔍</div>
+            <p>
+              Violation alerts will appear here in real time.<br />
+              Select a student from the sidebar to begin.
+            </p>
+          </div>
+        </div>
+
+        <div class="stats-bar">
+          <div class="stat">
+            <span class="stat-value" id="totalAlerts">0</span>
+            <span class="stat-label">Alerts</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="highAlerts">0</span>
+            <span class="stat-label">High</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="mediumAlerts">0</span>
+            <span class="stat-label">Medium</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="watchingCount">0</span>
+            <span class="stat-label">Students watched</span>
+          </div>
+          <button
+            class="report-btn"
+            onclick="showReport()"
+            id="reportBtn"
+            disabled
+          >
+            View Report
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Report modal -->
+    <div class="modal-overlay" id="modalOverlay">
+      <div class="modal">
+        <h3 id="modalTitle">Session Report</h3>
+        <div id="reportContent"></div>
+        <button class="close-modal" onclick="closeModal()">Close</button>
+      </div>
+    </div>
+
+    <script>
+      const API = "http://127.0.0.1:8000";
+
+      let watchedSessions = {}; // session_id → { ws, alerts, studentName, examTitle }
+      let activeSessionId = null;
+      let currentExamId = null;
+      let stats = { total: 0, high: 0, medium: 0 };
+      let refreshTimer = null;
+
+      // ── Tab switching ──────────────────────────────────────
+
+      function switchTab(tab) {
+        document
+          .getElementById("tab-exam")
+          .classList.toggle("active", tab === "exam");
+        document
+          .getElementById("tab-session")
+          .classList.toggle("active", tab === "session");
+        document
+          .getElementById("panel-exam")
+          .classList.toggle("active", tab === "exam");
+        document
+          .getElementById("panel-session")
+          .classList.toggle("active", tab === "session");
+      }
+
+      // ── Load all sessions for an exam ─────────────────────
+
+      async function loadExam() {
+        const examId = parseInt(document.getElementById("examIdInput").value);
+        if (!examId) return;
+
+        currentExamId = examId;
+
+        try {
+          const res = await fetch(`${API}/api/exams/${examId}/sessions`);
+
+          if (!res.ok) {
+            alert("Exam not found or no sessions exist yet.");
+            return;
+          }
+
+          const data = await res.json();
+
+          // Show exam strip
+          const strip = document.getElementById("examStrip");
+          strip.classList.add("show");
+          document.getElementById("examStripTitle").textContent =
+            data.exam_title;
+          document.getElementById("examStripMeta").textContent =
+            `${data.total_students} student${data.total_students !== 1 ? "s" : ""} · Exam #${examId}`;
+          document.getElementById("examLabel").textContent = data.exam_title;
+
+          // Load each session
+          let newCount = 0;
+          for (const session of data.sessions) {
+            if (!watchedSessions[session.session_id]) {
+              addSessionCard(session);
+              connectWS(
+                session.session_id,
+                session.student_name,
+                data.exam_title,
+              );
+              newCount++;
+            } else {
+              // Update existing card stats
+              updateSessionCard(session);
+            }
+          }
+
+          updateWatchingCount();
+
+          if (newCount > 0) {
+            console.log(`Loaded ${newCount} new session(s) for exam ${examId}`);
+          }
+        } catch (error) {
+          alert("Could not reach server. Is it running?");
+        }
+      }
+
+      async function refreshExam() {
+        if (!currentExamId) {
+          alert("Load an exam first.");
+          return;
+        }
+        await loadExam();
+      }
+
+      // ── Watch a single session by ID ───────────────────────
+
+      async function watchSingleSession() {
+        const sessionId = parseInt(
+          document.getElementById("sessionIdInput").value,
+        );
+        if (!sessionId) return;
+
+        if (watchedSessions[sessionId]) {
+          selectSession(sessionId);
+          return;
+        }
+
+        try {
+          const res = await fetch(`${API}/api/sessions/${sessionId}/report`);
+          if (!res.ok) {
+            alert("Session not found.");
+            return;
+          }
+
+          const data = await res.json();
+
+          const sessionInfo = {
+            session_id: sessionId,
+            student_name: data.student,
+            total_violations: data.total_violations,
+            high_violations: data.violation_breakdown["high"] || 0,
+            status: data.session.status,
+          };
+
+          addSessionCard(sessionInfo);
+          connectWS(sessionId, data.student, data.exam);
+          selectSession(sessionId);
+          updateWatchingCount();
+        } catch (error) {
+          alert("Could not reach server.");
+        }
+      }
+
+      // ── Add session card to sidebar ────────────────────────
+
+      function addSessionCard(session) {
+        const list = document.getElementById("sessionList");
+
+        // Remove placeholder
+        const placeholder = list.querySelector(".placeholder-text");
+        if (placeholder) placeholder.remove();
+
+        // Initialise in watchedSessions
+        if (!watchedSessions[session.session_id]) {
+          watchedSessions[session.session_id] = {
+            alerts: [],
+            studentName: session.student_name,
+            examTitle: "",
+            ws: null,
+          };
+        }
+
+        const existing = document.getElementById(`card-${session.session_id}`);
+        if (existing) {
+          updateSessionCard(session);
+          return;
+        }
+
+        const count = session.total_violations || 0;
+        const pillClass = count === 0 ? "none" : count < 3 ? "some" : "many";
+        const statusClass = session.status || "active";
+
+        const card = document.createElement("div");
+        card.className = "session-card";
+        card.id = `card-${session.session_id}`;
+        card.onclick = () => selectSession(session.session_id);
+        card.innerHTML = `
+      <div class="session-card-top">
+        <span class="session-name">${session.student_name}</span>
+        <span class="violation-pill ${pillClass}" id="pill-${session.session_id}">
+          ${count} violation${count !== 1 ? "s" : ""}
+        </span>
+      </div>
+      <div class="session-meta">
+        <span>Session #${session.session_id}</span>
+        <span class="student-status ${statusClass}" id="status-${session.session_id}">
+          ${statusClass}
+        </span>
+      </div>
+    `;
+
+        list.appendChild(card);
+      }
+
+      function updateSessionCard(session) {
+        const pill = document.getElementById(`pill-${session.session_id}`);
+        if (pill) {
+          const count = session.total_violations || 0;
+          const pillClass = count === 0 ? "none" : count < 3 ? "some" : "many";
+          pill.textContent = `${count} violation${count !== 1 ? "s" : ""}`;
+          pill.className = `violation-pill ${pillClass}`;
+        }
+
+        const statusEl = document.getElementById(
+          `status-${session.session_id}`,
+        );
+        if (statusEl && session.status) {
+          statusEl.textContent = session.status;
+          statusEl.className = `student-status ${session.status}`;
+        }
+      }
+
+      // ── WebSocket per session ──────────────────────────────
+
+      function connectWS(sessionId, studentName, examTitle) {
+        if (watchedSessions[sessionId]) {
+          watchedSessions[sessionId].studentName = studentName;
+          watchedSessions[sessionId].examTitle = examTitle || "";
+        }
+
+        const ws = new WebSocket(
+          `ws://127.0.0.1:8000/ws/invigilator/${sessionId}`,
+        );
+
+        ws.onopen = () => {
+          console.log(`Connected to session ${sessionId} (${studentName})`);
+        };
+
+        ws.onmessage = (event) => {
+          const message = JSON.parse(event.data);
+          if (message.type === "violation") {
+            handleViolation(sessionId, message);
+          }
+        };
+
+        ws.onclose = () => {
+          setTimeout(() => connectWS(sessionId, studentName, examTitle), 3000);
+        };
+
+        if (watchedSessions[sessionId]) {
+          watchedSessions[sessionId].ws = ws;
+        }
+      }
+
+      // ── Handle incoming violation ──────────────────────────
+
+      function handleViolation(sessionId, message) {
+        const session = watchedSessions[sessionId];
+        if (!session) return;
+
+        session.alerts.push(message);
+
+        const violation = message.violation;
+
+        // Update sidebar card
+        const pill = document.getElementById(`pill-${sessionId}`);
+        const count = session.alerts.length;
+        if (pill) {
+          const pillClass = count === 0 ? "none" : count < 3 ? "some" : "many";
+          pill.textContent = `${count} violation${count !== 1 ? "s" : ""}`;
+          pill.className = `violation-pill ${pillClass}`;
+        }
+
+        // Flag card border if high severity
+        if (violation.severity === "high") {
+          const card = document.getElementById(`card-${sessionId}`);
+          if (card) card.classList.add("flagged");
+
+          const statusEl = document.getElementById(`status-${sessionId}`);
+          if (statusEl) {
+            statusEl.textContent = "flagged";
+            statusEl.className = "student-status flagged";
+          }
+        }
+
+        // Show in feed if this session is active
+        if (activeSessionId === sessionId) {
+          addAlertToFeed(message, session.studentName);
+          updateStats(violation.severity);
+        }
+
+        // Flash page title
+        document.title = `⚠️ ${session.studentName} — violation detected`;
+        setTimeout(() => (document.title = "Invigilator Dashboard"), 4000);
+      }
+
+      // ── Add alert to live feed ─────────────────────────────
+
+      function addAlertToFeed(message, studentName) {
+        const feed = document.getElementById("alertFeed");
+        const violation = message.violation;
+
+        const emptyState = feed.querySelector(".empty-state");
+        if (emptyState) emptyState.remove();
+
+        const icons = {
+          no_face: "👤",
+          multiple_faces: "👥",
+          suspicious_gaze: "👀",
+          tab_switch: "🔀",
+          deepfake_detected: "🤖",
+          no_blink_detected: "📸",
+          low_blink_rate: "👁️",
+          no_head_movement: "🗿",
+          challenge_failed: "❌",
+          detection_error: "⚙️",
+        };
+
+        const labels = {
+          no_face: "Face Not Detected",
+          multiple_faces: "Multiple People Detected",
+          suspicious_gaze: "Suspicious Gaze Direction",
+          tab_switch: "Tab Switch Detected",
+          deepfake_detected: "Deepfake / Spoofing Detected",
+          no_blink_detected: "No Blinking — Possible Photo Spoof",
+          low_blink_rate: "Low Blink Rate",
+          no_head_movement: "No Head Movement",
+          challenge_failed: "Liveness Challenge Failed",
+          detection_error: "Detection Error",
+        };
+
+        const time = new Date().toLocaleTimeString();
+
+        const item = document.createElement("div");
+        item.className = `alert-item ${violation.severity}`;
+        item.innerHTML = `
+      <div class="alert-icon">${icons[violation.type] || "⚠️"}</div>
+      <div class="alert-content">
+        <div class="alert-title">${labels[violation.type] || violation.type}</div>
+        <div class="alert-desc">${violation.description}</div>
+        <div class="alert-meta">
+          Session #${activeSessionId} · ${studentName} · ${time}
+        </div>
+      </div>
+      <span class="severity-badge ${violation.severity}">${violation.severity}</span>
+    `;
+
+        feed.insertBefore(item, feed.firstChild);
+      }
+
+      // ── Select a session to view in main panel ─────────────
+
+      function selectSession(sessionId) {
+        activeSessionId = sessionId;
+        const session = watchedSessions[sessionId];
+        if (!session) return;
+
+        // Update sidebar active state
+        document
+          .querySelectorAll(".session-card")
+          .forEach((c) => c.classList.remove("active"));
+        const card = document.getElementById(`card-${sessionId}`);
+        if (card) card.classList.add("active");
+
+        // Update panel header
+        document.getElementById("panelTitle").textContent =
+          `${session.studentName} — Session #${sessionId}`;
+        document.getElementById("panelMeta").textContent =
+          session.examTitle || "";
+
+        // Enable report button
+        document.getElementById("reportBtn").disabled = false;
+
+        // Reset stats for this session
+        stats = { total: 0, high: 0, medium: 0 };
+
+        // Replay all alerts for this session
+        const feed = document.getElementById("alertFeed");
+        feed.innerHTML = "";
+
+        if (session.alerts.length === 0) {
+          feed.innerHTML = `
+        <div class="empty-state">
+          <div class="icon">✅</div>
+          <p>No violations detected for ${session.studentName} yet.</p>
+        </div>
+      `;
+        } else {
+          session.alerts.forEach((a) => {
+            addAlertToFeed(a, session.studentName);
+            updateStats(a.violation.severity);
+          });
+        }
+      }
+
+      // ── Stats ──────────────────────────────────────────────
+
+      function updateStats(severity) {
+        stats.total++;
+        if (severity === "high") stats.high++;
+        if (severity === "medium") stats.medium++;
+
+        document.getElementById("totalAlerts").textContent = stats.total;
+        document.getElementById("highAlerts").textContent = stats.high;
+        document.getElementById("mediumAlerts").textContent = stats.medium;
+      }
+
+      function updateWatchingCount() {
+        document.getElementById("watchingCount").textContent =
+          Object.keys(watchedSessions).length;
+      }
+
+      // ── Session report modal ───────────────────────────────
+
+      async function showReport() {
+        if (!activeSessionId) return;
+
+        const res = await fetch(
+          `${API}/api/sessions/${activeSessionId}/report`,
+        );
+        const data = await res.json();
+
+        const session = watchedSessions[activeSessionId];
+
+        document.getElementById("modalTitle").textContent =
+          `Report — ${data.student}`;
+
+        const breakdown = data.violation_breakdown;
+        const breakdownHTML =
+          Object.keys(breakdown).length > 0
+            ? `
+        <div style="margin-top:16px;font-size:12px;color:#64748b;
+                    text-transform:uppercase;letter-spacing:0.5px;
+                    margin-bottom:8px;">
+          Breakdown
+        </div>
+        <div class="breakdown-grid">
+          ${Object.entries(breakdown)
+            .map(
+              ([type, count]) => `
+            <div class="breakdown-card">
+              <div class="count">${count}</div>
+              <div class="type">${type.replace(/_/g, " ")}</div>
+            </div>
+          `,
+            )
+            .join("")}
+        </div>
+      `
+            : '<div style="color:#64748b;font-size:13px;margin-top:12px;">No violations recorded.</div>';
+
+        document.getElementById("reportContent").innerHTML = `
+      <div class="report-row">
+        <span class="label">Student</span>
+        <span class="value">${data.student}</span>
+      </div>
+      <div class="report-row">
+        <span class="label">Exam</span>
+        <span class="value">${data.exam}</span>
+      </div>
+      <div class="report-row">
+        <span class="label">Session ID</span>
+        <span class="value">#${activeSessionId}</span>
+      </div>
+      <div class="report-row">
+        <span class="label">Started</span>
+        <span class="value">${new Date(data.started_at).toLocaleString()}</span>
+      </div>
+      <div class="report-row">
+        <span class="label">Status</span>
+        <span class="value">${data.status}</span>
+      </div>
+      <div class="report-row">
+        <span class="label">Total violations</span>
+        <span class="value">${data.total_violations}</span>
+      </div>
+      ${breakdownHTML}
+    `;
+
+        document.getElementById("modalOverlay").classList.add("show");
+      }
+
+      function closeModal() {
+        document.getElementById("modalOverlay").classList.remove("show");
+      }
+    </script>
+  </body>
+</html>

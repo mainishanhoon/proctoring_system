@@ -1,0 +1,22 @@
+[
+  {"q":"What main web framework does the backend use?","a":"FastAPI"},
+  {"q":"Where are face encodings stored?","a":"In `Student.face_encoding` as JSON text (HOG descriptor) in the SQLite DB."},
+  {"q":"Which library provides face mesh landmarks?","a":"MediaPipe (face_mesh)"},
+  {"q":"What method is used for blink detection?","a":"Eye Aspect Ratio (EAR) using mesh landmarks"},
+  {"q":"Name three detectors called by `analyse_frame`.","a":"Liveness (`analyse_liveness`), Deepfake (`analyse_deepfake`), Face verification (`verify_face`)"},
+  {"q":"Which file handles WebSocket connection management?","a":"`backend/main.py` (ConnectionManager)"},
+  {"q":"What is the default match threshold for verification?","a":"0.70 (MATCH_THRESHOLD)"},
+  {"q":"What database is used?","a":"SQLite via SQLAlchemy (`sqlite:///./proctoring.db`)"},
+  {"q":"How are violations delivered in real time?","a":"Via WebSocket alerts to invigilator clients"},
+  {"q":"How does the deepfake detector get a score?","a":"Weighted combination of FFT analysis, noise analysis, and blending checks"},
+  {"q":"Why initialize MediaPipe models at import?","a":"To avoid expensive reinitialization per frame and improve throughput"},
+  {"q":"What endpoint receives tab-switch events?","a":"POST /api/sessions/{session_id}/tab-switch"},
+  {"q":"What does a 'flagged' session indicate?","a":"A session with at least one high-severity violation"},
+  {"q":"Give one scalability improvement for WebSockets in production.","a":"Use Redis pub/sub and a distributed connection manager so multiple app instances can route events"},
+  {"q":"What is a shortcoming of heuristic deepfake detection?","a":"It can be brittle to compression and camera noise; requires dataset calibration"},
+  {"q":"What OpenCV feature is used to compute embeddings?","a":"HOGDescriptor (used as face embedding)"},
+  {"q":"How are screenshots referenced in DB?","a":"`Violation.screenshot` stores a path to saved image in `violations/`"},
+  {"q":"What file creates DB tables at startup?","a":"`backend/main.py` calls `create_tables()` from `database.py`"},
+  {"q":"Why store embeddings instead of raw images?","a":"Reduces sensitive data footprint and simplifies matching; smaller storage and faster comparisons"},
+  {"q":"Which Python package may need a pinned protobuf version?","a":"mediapipe (pin protobuf to 3.20.3 in some environments)"}
+]

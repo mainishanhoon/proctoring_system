@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Exam — Proctoring System</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f5f5;
+        min-height: 100vh;
+      }
+
+      /* ── Top bar ── */
+      .topbar {
+        background: #1e293b;
+        color: white;
+        padding: 12px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .topbar h1 {
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #22c55e;
+        display: inline-block;
+        margin-right: 6px;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+
+        50% {
+          opacity: 0.4;
+        }
+      }
+
+      .timer {
+        font-size: 14px;
+        font-family: monospace;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 4px 12px;
+        border-radius: 6px;
+      }
+
+      /* ── Warning banner ── */
+      .warning-banner {
+        display: none;
+        background: #fef2f2;
+        border-left: 4px solid #ef4444;
+        padding: 12px 24px;
+        color: #b91c1c;
+        font-size: 14px;
+        font-weight: 500;
+        animation: slideDown 0.3s ease;
+      }
+
+      .warning-banner.show {
+        display: block;
+      }
+
+      @keyframes slideDown {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
+        }
+
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      /* ── Main layout ── */
+      .main {
+        display: grid;
+        grid-template-columns: 1fr 280px;
+        gap: 20px;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+
+      /* ── Exam panel ── */
+      .exam-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .exam-title {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 6px;
+      }
+
+      .exam-subtitle {
+        font-size: 13px;
+        color: #94a3b8;
+        margin-bottom: 28px;
+      }
+
+      .question {
+        margin-bottom: 28px;
+      }
+
+      .question p {
+        font-size: 15px;
+        color: #334155;
+        margin-bottom: 14px;
+        font-weight: 500;
+        line-height: 1.6;
+      }
+
+      .options label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #475569;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+
+      .options label:hover {
+        background: #f8fafc;
+        border-color: #94a3b8;
+      }
+
+      .options input[type="radio"]:checked + span {
+        color: #1e40af;
+        font-weight: 500;
+      }
+
+      .options label:has(input:checked) {
+        border-color: #3b82f6;
+        background: #eff6ff;
+      }
+
+      .submit-btn {
+        margin-top: 24px;
+        padding: 12px 28px;
+        background: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+
+      .submit-btn:hover {
+        background: #334155;
+      }
+
+      /* ── Camera panel ── */
+      .camera-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+
+      .camera-card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+      }
+
+      .camera-card h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 12px;
+      }
+
+      #webcam {
+        width: 100%;
+        border-radius: 8px;
+        background: #0f172a;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+        display: block;
+      }
+
+      .camera-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 10px;
+        font-size: 12px;
+        color: #64748b;
+      }
+
+      /* ── Violation log ── */
+      .violation-log {
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .violation-item {
+        padding: 8px 10px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .violation-item.high {
+        background: #fef2f2;
+        color: #b91c1c;
+        border-left: 3px solid #ef4444;
+      }
+
+      .violation-item.medium {
+        background: #fffbeb;
+        color: #92400e;
+        border-left: 3px solid #f59e0b;
+      }
+
+      .violation-item.low {
+        background: #f0fdf4;
+        color: #166534;
+        border-left: 3px solid #22c55e;
+      }
+
+      .violation-time {
+        font-size: 10px;
+        opacity: 0.7;
+        margin-top: 2px;
+      }
+
+      .no-violations {
+        font-size: 12px;
+        color: #94a3b8;
+        text-align: center;
+        padding: 16px 0;
+      }
+
+      /* ── Setup screen ── */
+      .setup-screen {
+        position: fixed;
+        inset: 0;
+        background: #0f172a;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+
+      .setup-card {
+        background: white;
+        border-radius: 16px;
+        padding: 40px;
+        width: 100%;
+        max-width: 420px;
+        text-align: center;
+      }
+
+      .setup-card h2 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 8px;
+      }
+
+      .setup-card p {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 24px;
+        line-height: 1.6;
+      }
+
+      .setup-card input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        color: #1e293b;
+      }
+
+      .setup-card input:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .start-btn {
+        width: 100%;
+        padding: 12px;
+        background: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 8px;
+      }
+
+      .start-btn:hover {
+        background: #334155;
+      }
+
+      .start-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .error-msg {
+        font-size: 13px;
+        color: #ef4444;
+        margin-top: 8px;
+        display: none;
+      }
+
+      /* ── Challenge overlay ── */
+      .challenge-overlay {
+        display: none;
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 16px 28px;
+        border-radius: 14px;
+        text-align: center;
+        z-index: 50;
+        border: 2px solid #3b82f6;
+        min-width: 320px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .challenge-overlay.show {
+        display: block;
+      }
+
+      .challenge-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #3b82f6;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+
+      .challenge-instruction {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .challenge-timer {
+        font-size: 13px;
+        color: #94a3b8;
+        font-family: monospace;
+      }
+
+      .challenge-result {
+        display: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+
+      .challenge-result.passed {
+        background: #14532d;
+        color: #86efac;
+        display: block;
+      }
+
+      .challenge-result.failed {
+        background: #7f1d1d;
+        color: #fca5a5;
+        display: block;
+      }
+
+      /* ── Challenge overlay ── */
+      .challenge-overlay {
+        display: none;
+        position: fixed;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 16px 28px;
+        border-radius: 14px;
+        text-align: center;
+        z-index: 50;
+        border: 2px solid #3b82f6;
+        min-width: 320px;
+      }
+
+      .challenge-overlay.show {
+        display: block;
+      }
+
+      .challenge-title {
+        font-size: 12px;
+        font-weight: 700;
+        color: #3b82f6;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 6px;
+      }
+
+      .challenge-instruction {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 10px;
+      }
+
+      .challenge-timer {
+        font-size: 13px;
+        color: #94a3b8;
+        font-family: monospace;
+      }
+
+      .challenge-result {
+        display: none;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        margin-top: 8px;
+      }
+
+      .challenge-result.passed {
+        background: #14532d;
+        color: #86efac;
+        display: block;
+      }
+
+      .challenge-result.failed {
+        background: #7f1d1d;
+        color: #fca5a5;
+        display: block;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Setup screen — shown before exam starts -->
+    <div class="setup-screen" id="setupScreen">
+      <div class="setup-card">
+        <h2>Join Exam</h2>
+        <p>
+          Enter your session ID to begin. Make sure your camera is enabled and
+          you are in a well-lit room.
+        </p>
+        <input type="number" id="sessionId" placeholder="Session ID" min="1" />
+        <input type="text" id="studentName" placeholder="Your name" />
+        <button class="start-btn" id="startBtn" onclick="startExam()">
+          Start Exam
+        </button>
+        <p class="error-msg" id="errorMsg"></p>
+      </div>
+    </div>
+
+    <!-- Main exam page -->
+    <div class="topbar">
+      <h1>
+        <span class="status-dot" id="statusDot"></span>
+        Proctored Exam — <span id="examTitle">Loading...</span>
+      </h1>
+      <div class="timer" id="timer">00:00:00</div>
+    </div>
+
+    <div class="warning-banner" id="warningBanner">
+      ⚠️ <span id="warningText">Warning message here</span>
+    </div>
+
+    <div class="main">
+      <!-- Exam questions -->
+      <div class="exam-panel">
+        <div class="exam-title">Sample Examination</div>
+        <div class="exam-subtitle">
+          Answer all questions. Do not switch tabs or leave the window.
+        </div>
+
+        <div class="question">
+          <p>1. What is the time complexity of binary search?</p>
+          <div class="options">
+            <label
+              ><input type="radio" name="q1" value="a" />
+              <span>O(n)</span></label
+            >
+            <label
+              ><input type="radio" name="q1" value="b" />
+              <span>O(log n)</span></label
+            >
+            <label
+              ><input type="radio" name="q1" value="c" />
+              <span>O(n²)</span></label
+            >
+            <label
+              ><input type="radio" name="q1" value="d" />
+              <span>O(1)</span></label
+            >
+          </div>
+        </div>
+
+        <div class="question">
+          <p>2. Which data structure uses LIFO order?</p>
+          <div class="options">
+            <label
+              ><input type="radio" name="q2" value="a" />
+              <span>Queue</span></label
+            >
+            <label
+              ><input type="radio" name="q2" value="b" />
+              <span>Linked List</span></label
+            >
+            <label
+              ><input type="radio" name="q2" value="c" />
+              <span>Stack</span></label
+            >
+            <label
+              ><input type="radio" name="q2" value="d" />
+              <span>Tree</span></label
+            >
+          </div>
+        </div>
+
+        <div class="question">
+          <p>3. What does SQL stand for?</p>
+          <div class="options">
+            <label
+              ><input type="radio" name="q3" value="a" />
+              <span>Structured Query Language</span></label
+            >
+            <label
+              ><input type="radio" name="q3" value="b" />
+              <span>Simple Query Language</span></label
+            >
+            <label
+              ><input type="radio" name="q3" value="c" />
+              <span>Standard Query Logic</span></label
+            >
+            <label
+              ><input type="radio" name="q3" value="d" />
+              <span>Sequential Query List</span></label
+            >
+          </div>
+        </div>
+
+        <button class="submit-btn" onclick="submitExam()">Submit Exam</button>
+      </div>
+
+      <!-- Camera + violation log -->
+      <div class="camera-panel">
+        <div class="camera-card">
+          <h3>Camera Feed</h3>
+          <video id="webcam" autoplay muted playsinline></video>
+          <canvas id="canvas" style="display: none"></canvas>
+          <div class="camera-status">
+            <span
+              class="status-dot"
+              style="
+                width: 8px;
+                height: 8px;
+                animation: none;
+                background: #22c55e;
+              "
+            ></span>
+            Camera active — monitored
+          </div>
+        </div>
+
+        <div class="camera-card">
+          <h3>Your Activity Log</h3>
+          <div class="violation-log" id="violationLog">
+            <div class="no-violations" id="noViolations">
+              No violations detected
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Challenge overlay -->
+      <div class="challenge-overlay" id="challengeOverlay">
+        <div class="challenge-title">Liveness Check</div>
+        <div class="challenge-instruction" id="challengeInstruction"></div>
+        <div class="challenge-timer" id="challengeTimer"></div>
+        <div class="challenge-result" id="challengeResult"></div>
+      </div>
+    </div>
+
+    <script>
+      const API = "http://127.0.0.1:8000";
+
+      let sessionId = null;
+      let studentName = "";
+      let ws = null;
+      let frameInterval = null;
+      let timerInterval = null;
+      let secondsElapsed = 0;
+      let warningTimeout = null;
+      let localViolations = [];
+
+      // ── Setup ──────────────────────────────────────────────
+
+      async function startExam() {
+        const idInput = document.getElementById("sessionId");
+        const nameInput = document.getElementById("studentName");
+        const errorMsg = document.getElementById("errorMsg");
+        const startBtn = document.getElementById("startBtn");
+
+        if (!idInput.value || !nameInput.value.trim()) {
+          showError("Please enter both your session ID and name.");
+          return;
+        }
+
+        sessionId = parseInt(idInput.value);
+        studentName = nameInput.value.trim();
+
+        startBtn.disabled = true;
+        startBtn.textContent = "Connecting...";
+        errorMsg.style.display = "none";
+
+        try {
+          // Verify session exists
+          const res = await fetch(`${API}/api/sessions/${sessionId}/report`);
+          if (!res.ok) {
+            showError("Session not found. Check your session ID.");
+            startBtn.disabled = false;
+            startBtn.textContent = "Start Exam";
+            return;
+          }
+
+          const data = await res.json();
+          document.getElementById("examTitle").textContent = data.exam;
+
+          // Start webcam
+          await startWebcam();
+
+          // Connect WebSocket for live warnings
+          connectWebSocket();
+
+          // Start sending frames
+          frameInterval = setInterval(sendFrame, 2000);
+
+          // Start timer
+          timerInterval = setInterval(updateTimer, 1000);
+
+          // Tab switch detection
+          document.addEventListener("visibilitychange", handleTabSwitch);
+
+          // Hide setup screen
+          document.getElementById("setupScreen").style.display = "none";
+        } catch (error) {
+          showError("Could not connect to server. Is it running?");
+          startBtn.disabled = false;
+          startBtn.textContent = "Start Exam";
+        }
+      }
+
+      function showError(msg) {
+        const el = document.getElementById("errorMsg");
+        el.textContent = msg;
+        el.style.display = "block";
+      }
+
+      // ── Webcam ─────────────────────────────────────────────
+
+      async function startWebcam() {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 640, height: 480, facingMode: "user" },
+          audio: false,
+        });
+        document.getElementById("webcam").srcObject = stream;
+      }
+
+      // ── Frame sending ──────────────────────────────────────
+      async function sendFrame() {
+        const video = document.getElementById("webcam");
+        const canvas = document.getElementById("canvas");
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0);
+
+        canvas.toBlob(
+          async (blob) => {
+            if (!blob) return;
+
+            const formData = new FormData();
+            formData.append("file", blob, "frame.jpg");
+
+            try {
+              const res = await fetch(
+                `${API}/api/sessions/${sessionId}/frame`,
+                { method: "POST", body: formData },
+              );
+              const data = await res.json();
+
+              // Handle violations
+              if (data.detection && data.detection.violations.length > 0) {
+                data.detection.violations.forEach((v) => addToLocalLog(v));
+              }
+
+              // Handle liveness challenge
+              if (data.detection && data.detection.liveness) {
+                const liveness = data.detection.liveness;
+
+                if (liveness.challenge) {
+                  showChallenge(
+                    liveness.challenge.instruction,
+                    liveness.challenge.timeout,
+                  );
+                }
+
+                if (liveness.challenge_status === "passed") {
+                  showChallengeResult("passed", "Liveness confirmed!");
+                } else if (liveness.challenge_status === "failed") {
+                  showChallengeResult(
+                    "failed",
+                    "Challenge failed — please stay visible",
+                  );
+                }
+              }
+            } catch (error) {
+              console.log("Frame send error:", error);
+            }
+          },
+          "image/jpeg",
+          0.8,
+        );
+      }
+
+      // ── Challenge UI ───────────────────────────────────────────
+
+      let challengeTimerInterval = null;
+
+      function showChallenge(instruction, timeout) {
+        const overlay = document.getElementById("challengeOverlay");
+        document.getElementById("challengeInstruction").textContent =
+          instruction;
+        document.getElementById("challengeResult").className =
+          "challenge-result";
+        overlay.classList.add("show");
+
+        let remaining = timeout;
+        document.getElementById("challengeTimer").textContent =
+          `Complete within ${remaining} seconds`;
+
+        clearInterval(challengeTimerInterval);
+        challengeTimerInterval = setInterval(() => {
+          remaining--;
+          document.getElementById("challengeTimer").textContent =
+            `Complete within ${remaining} seconds`;
+          if (remaining <= 0) clearInterval(challengeTimerInterval);
+        }, 1000);
+      }
+
+      function showChallengeResult(status, message) {
+        const resultEl = document.getElementById("challengeResult");
+        resultEl.textContent =
+          status === "passed" ? `✓ ${message}` : `✗ ${message}`;
+        resultEl.className = `challenge-result ${status}`;
+
+        clearInterval(challengeTimerInterval);
+
+        setTimeout(() => {
+          document.getElementById("challengeOverlay").classList.remove("show");
+        }, 2500);
+      }
+
+      // ── Tab switch detection ───────────────────────────────
+
+      async function handleTabSwitch() {
+        if (document.hidden) {
+          const event = {
+            session_id: sessionId,
+            timestamp: new Date().toISOString(),
+            description: "Student switched tabs or minimised the window",
+          };
+
+          try {
+            await fetch(`${API}/api/sessions/${sessionId}/tab-switch`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(event),
+            });
+          } catch (e) {
+            console.log("Tab switch log error:", e);
+          }
+
+          showWarning("Warning: Tab switching has been detected and logged.");
+          addToLocalLog({
+            type: "tab_switch",
+            severity: "high",
+            description: "You switched tabs or minimised the window",
+          });
+        }
+      }
+
+      // ── WebSocket ──────────────────────────────────────────
+
+      function connectWebSocket() {
+        ws = new WebSocket(`ws://127.0.0.1:8000/ws/student/${sessionId}`);
+
+        ws.onopen = () => console.log("WebSocket connected");
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.type === "warning") {
+            showWarning(data.message);
+          }
+        };
+
+        ws.onclose = () => {
+          // Reconnect after 3 seconds
+          setTimeout(connectWebSocket, 3000);
+        };
+      }
+
+      // ── Warning banner ─────────────────────────────────────
+
+      function showWarning(message) {
+        const banner = document.getElementById("warningBanner");
+        document.getElementById("warningText").textContent = message;
+        banner.classList.add("show");
+
+        clearTimeout(warningTimeout);
+        warningTimeout = setTimeout(() => {
+          banner.classList.remove("show");
+        }, 5000);
+      }
+
+      // ── Local violation log ────────────────────────────────
+
+      function addToLocalLog(violation) {
+        const log = document.getElementById("violationLog");
+        const noViol = document.getElementById("noViolations");
+
+        if (noViol) noViol.remove();
+
+        const item = document.createElement("div");
+        item.className = `violation-item ${violation.severity}`;
+
+        const time = new Date().toLocaleTimeString();
+        item.innerHTML = `
+      <div>${getViolationLabel(violation.type)}</div>
+      <div class="violation-time">${time}</div>
+    `;
+
+        log.insertBefore(item, log.firstChild);
+      }
+
+      function getViolationLabel(type) {
+        const labels = {
+          no_face: "Face not visible",
+          multiple_faces: "Multiple people detected",
+          suspicious_gaze: "Looking away from screen",
+          tab_switch: "Tab switch detected",
+        };
+        return labels[type] || type;
+      }
+
+      // ── Timer ──────────────────────────────────────────────
+
+      function updateTimer() {
+        secondsElapsed++;
+        const h = String(Math.floor(secondsElapsed / 3600)).padStart(2, "0");
+        const m = String(Math.floor((secondsElapsed % 3600) / 60)).padStart(
+          2,
+          "0",
+        );
+        const s = String(secondsElapsed % 60).padStart(2, "0");
+        document.getElementById("timer").textContent = `${h}:${m}:${s}`;
+      }
+
+      // ── Submit ─────────────────────────────────────────────
+
+      async function submitExam() {
+        if (!confirm("Are you sure you want to submit the exam?")) return;
+
+        clearInterval(frameInterval);
+        clearInterval(timerInterval);
+        document.removeEventListener("visibilitychange", handleTabSwitch);
+
+        try {
+          await fetch(`${API}/api/sessions/${sessionId}/end`, {
+            method: "PUT",
+          });
+        } catch (e) {}
+
+        document.body.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:center;
+                  min-height:100vh;background:#f5f5f5;font-family:sans-serif;">
+        <div style="background:white;padding:48px;border-radius:16px;
+                    text-align:center;border:1px solid #e2e8f0;max-width:400px;">
+          <div style="font-size:48px;margin-bottom:16px;">✓</div>
+          <h2 style="font-size:22px;color:#1e293b;margin-bottom:8px;">
+            Exam Submitted
+          </h2>
+          <p style="color:#64748b;font-size:14px;">
+            Your responses have been recorded. You may close this window.
+          </p>
+        </div>
+      </div>
+    `;
+      }
+    </script>
+  </body>
+</html>

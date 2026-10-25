@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Face Registration — Proctoring System</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f5f5f5;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 20px;
+        padding: 40px;
+        width: 100%;
+        max-width: 480px;
+        border: 1px solid #e2e8f0;
+      }
+
+      h1 {
+        font-size: 22px;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 6px;
+      }
+
+      .subtitle {
+        font-size: 14px;
+        color: #64748b;
+        margin-bottom: 28px;
+        line-height: 1.6;
+      }
+
+      .step {
+        display: none;
+      }
+
+      .step.active {
+        display: block;
+      }
+
+      input {
+        width: 100%;
+        padding: 10px 14px;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        color: #1e293b;
+      }
+
+      input:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .btn {
+        width: 100%;
+        padding: 12px;
+        background: #1e293b;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        margin-top: 8px;
+        transition: background 0.2s;
+      }
+
+      .btn:hover {
+        background: #334155;
+      }
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .btn.secondary {
+        background: #f1f5f9;
+        color: #475569;
+        margin-top: 10px;
+      }
+
+      .btn.secondary:hover {
+        background: #e2e8f0;
+      }
+
+      /* Camera */
+      .camera-wrap {
+        position: relative;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #0f172a;
+        margin-bottom: 16px;
+        aspect-ratio: 4/3;
+      }
+
+      #webcam {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .face-guide {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+      }
+
+      .face-oval {
+        width: 160px;
+        height: 200px;
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+        border-radius: 50%;
+      }
+
+      canvas {
+        display: none;
+      }
+
+      /* Preview */
+      .preview-wrap {
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        border: 2px solid #e2e8f0;
+      }
+
+      .preview-wrap img {
+        width: 100%;
+        display: block;
+      }
+
+      /* Status messages */
+      .msg {
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        margin-bottom: 14px;
+        display: none;
+      }
+
+      .msg.show {
+        display: block;
+      }
+      .msg.error {
+        background: #fef2f2;
+        color: #b91c1c;
+      }
+      .msg.success {
+        background: #f0fdf4;
+        color: #166534;
+      }
+      .msg.info {
+        background: #eff6ff;
+        color: #1e40af;
+      }
+
+      /* Tips */
+      .tips {
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+      }
+
+      .tips p {
+        font-size: 12px;
+        color: #64748b;
+        margin-bottom: 4px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .tips p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Progress steps */
+      .progress {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 28px;
+      }
+
+      .progress-step {
+        flex: 1;
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 2px;
+        transition: background 0.3s;
+      }
+
+      .progress-step.done {
+        background: #1e293b;
+      }
+
+      /* Success screen */
+      .success-icon {
+        font-size: 56px;
+        text-align: center;
+        margin-bottom: 16px;
+      }
+
+      .success-title {
+        font-size: 20px;
+        font-weight: 600;
+        text-align: center;
+        color: #1e293b;
+        margin-bottom: 8px;
+      }
+
+      .success-body {
+        font-size: 14px;
+        text-align: center;
+        color: #64748b;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Face Registration</h1>
+      <p class="subtitle">
+        Register your face once. It will be used to verify your identity during
+        all your exams.
+      </p>
+
+      <!-- Progress bar -->
+      <div class="progress">
+        <div class="progress-step done" id="prog1"></div>
+        <div class="progress-step" id="prog2"></div>
+        <div class="progress-step" id="prog3"></div>
+      </div>
+
+      <!-- Step 1 — Enter student ID -->
+      <div class="step active" id="step1">
+        <p
+          style="
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 14px;
+            font-weight: 500;
+          "
+        >
+          Step 1 — Identify yourself
+        </p>
+        <input
+          type="number"
+          id="studentId"
+          placeholder="Your student ID"
+          min="1"
+        />
+        <div class="msg" id="step1msg"></div>
+        <button class="btn" onclick="checkStudent()">Continue</button>
+      </div>
+
+      <!-- Step 2 — Take selfie -->
+      <div class="step" id="step2">
+        <p
+          style="
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 14px;
+            font-weight: 500;
+          "
+        >
+          Step 2 — Take your selfie
+        </p>
+
+        <div class="tips">
+          <p>☀️ Make sure you are in a well-lit room</p>
+          <p>👤 Look directly at the camera</p>
+          <p>😐 Keep a neutral expression</p>
+          <p>🚫 Remove glasses or hats if possible</p>
+        </div>
+
+        <div class="camera-wrap">
+          <video id="webcam" autoplay muted playsinline></video>
+          <div class="face-guide">
+            <div class="face-oval"></div>
+          </div>
+        </div>
+
+        <canvas id="canvas"></canvas>
+
+        <div class="msg" id="step2msg"></div>
+        <button class="btn" id="captureBtn" onclick="capturePhoto()">
+          Take Photo
+        </button>
+        <button class="btn secondary" onclick="goBack(1)">Back</button>
+      </div>
+
+      <!-- Step 3 — Confirm and submit -->
+      <div class="step" id="step3">
+        <p
+          style="
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 14px;
+            font-weight: 500;
+          "
+        >
+          Step 3 — Confirm your photo
+        </p>
+
+        <div class="preview-wrap">
+          <img id="previewImg" src="" alt="Your selfie" />
+        </div>
+
+        <div class="msg" id="step3msg"></div>
+
+        <button class="btn" id="submitBtn" onclick="submitRegistration()">
+          Register Face
+        </button>
+        <button class="btn secondary" onclick="retake()">Retake Photo</button>
+      </div>
+
+      <!-- Step 4 — Success -->
+      <div class="step" id="step4">
+        <div class="success-icon">✅</div>
+        <div class="success-title">Face Registered!</div>
+        <div class="success-body">
+          Your face has been registered successfully,
+          <strong id="successName"></strong>. You can now join your exams — your
+          identity will be verified automatically during the session.
+        </div>
+        <a href="/" style="text-decoration: none">
+          <button class="btn">Go to Exam Page</button>
+        </a>
+      </div>
+    </div>
+
+    <script>
+      const API = "http://127.0.0.1:8000";
+
+      let studentId = null;
+      let studentName = "";
+      let capturedBlob = null;
+
+      // ── Step 1 — Check student exists ─────────────────────
+
+      async function checkStudent() {
+        const id = parseInt(document.getElementById("studentId").value);
+        if (!id)
+          return showMsg("step1msg", "Please enter your student ID", "error");
+
+        try {
+          const res = await fetch(`${API}/api/students/${id}/face-status`);
+
+          if (!res.ok) {
+            return showMsg(
+              "step1msg",
+              "Student ID not found. Check with your invigilator.",
+              "error",
+            );
+          }
+
+          const data = await res.json();
+          studentId = id;
+          studentName = data.name;
+
+          if (data.face_registered) {
+            showMsg(
+              "step1msg",
+              `${data.name} already has a registered face. Proceeding will replace it.`,
+              "info",
+            );
+          }
+
+          // Move to step 2 after short delay
+          setTimeout(() => goTo(2), 800);
+        } catch (error) {
+          showMsg("step1msg", "Cannot reach server. Is it running?", "error");
+        }
+      }
+
+      // ── Step 2 — Camera ────────────────────────────────────
+
+      async function startCamera() {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 640, height: 480, facingMode: "user" },
+            audio: false,
+          });
+          document.getElementById("webcam").srcObject = stream;
+        } catch (error) {
+          showMsg(
+            "step2msg",
+            "Camera access denied. Please allow camera access and refresh.",
+            "error",
+          );
+        }
+      }
+
+      function capturePhoto() {
+        const video = document.getElementById("webcam");
+        const canvas = document.getElementById("canvas");
+
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+
+        const ctx = canvas.getContext("2d");
+        // Mirror the image (selfie feel)
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            capturedBlob = blob;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById("previewImg").src = e.target.result;
+            };
+            reader.readAsDataURL(blob);
+
+            goTo(3);
+          },
+          "image/jpeg",
+          0.95,
+        );
+      }
+
+      function retake() {
+        capturedBlob = null;
+        goTo(2);
+      }
+
+      // ── Step 3 — Submit registration ───────────────────────
+
+      async function submitRegistration() {
+        if (!capturedBlob) return;
+
+        const btn = document.getElementById("submitBtn");
+        btn.disabled = true;
+        btn.textContent = "Registering...";
+
+        showMsg("step3msg", "Analysing your photo...", "info");
+
+        try {
+          const formData = new FormData();
+          formData.append("file", capturedBlob, "selfie.jpg");
+
+          const res = await fetch(
+            `${API}/api/students/${studentId}/register-face`,
+            { method: "POST", body: formData },
+          );
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            showMsg(
+              "step3msg",
+              data.detail || "Registration failed. Please try again.",
+              "error",
+            );
+            btn.disabled = false;
+            btn.textContent = "Register Face";
+            return;
+          }
+
+          // Success
+          document.getElementById("successName").textContent = studentName;
+          goTo(4);
+        } catch (error) {
+          showMsg("step3msg", "Cannot reach server. Is it running?", "error");
+          btn.disabled = false;
+          btn.textContent = "Register Face";
+        }
+      }
+
+      // ── Navigation helpers ─────────────────────────────────
+
+      function goTo(stepNum) {
+        document.querySelectorAll(".step").forEach((el, i) => {
+          el.classList.toggle("active", i + 1 === stepNum);
+        });
+
+        // Update progress bar
+        for (let i = 1; i <= 3; i++) {
+          document
+            .getElementById(`prog${i}`)
+            .classList.toggle("done", i < stepNum);
+        }
+
+        if (stepNum === 2) startCamera();
+      }
+
+      function goBack(stepNum) {
+        goTo(stepNum);
+      }
+
+      // ── Message helper ─────────────────────────────────────
+
+      function showMsg(id, text, type) {
+        const el = document.getElementById(id);
+        el.textContent = text;
+        el.className = `msg show ${type}`;
+      }
+    </script>
+  </body>
+</html>
